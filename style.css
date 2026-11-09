@@ -48,3 +48,8 @@ nav button{font-size:11px}
 .fbar i{display:block;height:100%;border-radius:99px;position:relative;transition:width .5s ease;background:linear-gradient(90deg,#2fae7a,#8ff0a4 75%,#d2ffdc);box-shadow:0 0 14px #8ff0a47a}
 .fbar i::after{content:"";position:absolute;left:8px;right:8px;top:2px;height:4px;border-radius:99px;background:linear-gradient(90deg,#ffffff00,#ffffff66,#ffffff00)}
 .fbar i.over{background:linear-gradient(90deg,#d9734f,#f0a58f 75%,#ffd2c4);box-shadow:0 0 14px #f0a58f7a}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.g3 .stat b{font-size:17px}.g3 .stat{padding:9px 10px}
+.nt{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:6px;padding:9px 0;border-top:1px solid var(--card2);align-items:center;text-align:right}
+.nt span:first-child{text-align:left}.nt b{font-size:15px}.nt.mu{border-top:0;padding:0 0 4px}
+textarea{width:100%;background:var(--card2);border:1px solid transparent;border-radius:12px;padding:11px 12px;margin:4px 0 10px;color:inherit;font:inherit}
+textarea:focus{outline:2px solid var(--ac)}
