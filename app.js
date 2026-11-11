@@ -33,7 +33,8 @@ const sum=(a,k)=>a.reduce((s,x)=>s+(+x[k]||0),0);
 const sortedW=()=>[...D.weights].sort((a,b)=>a.date<b.date?-1:1);
 const latestW=()=>{const w=sortedW();return w.length?w[w.length-1].kg:D.profile.weight};
 const dayMeals=d=>D.meals.filter(m=>m.date===d),dayWork=d=>D.workouts.filter(x=>x.date===d);
-const hourType=()=>{const h=nowT();return h<'10:30'?0:h<'15:00'?1:h<'18:00'?2:3};
+const hourType=()=>{const h=nowT();return h<'05:00'?2:h<'12:00'?0:h<'15:00'?1:h<'19:00'?2:h<='22:30'?3:2};
+const defType=d=>d===today()?hourType():1;
 const sportKcal=(name,min,int,kg)=>{const s=D.sports.find(x=>x.name===name)||{m:4,h:6};return r0(((int?s.h:s.m)-1)*3.5*kg/200*min)};
 function calc(){const p=D.profile,g=D.goal,w=latestW();
  const bmr=10*w+6.25*p.height-5*p.age+(p.sex==='m'?5:-161),tdee=bmr*p.activity;
@@ -56,7 +57,7 @@ const workList=ws=>ws.length?ws.map((x,i)=>`<div class="item"><div><span class="
 function foodChips(d){const f=D.foods.filter(x=>x.fav),o=D.foods.filter(x=>!x.fav),c=x=>`<button class="chip" onclick="addFood('${x.id}','${d}')">${esc(x.name)}<span class="mu"> ${x.kcal}</span></button>`;
  return`<h2>Favoris</h2>${f.map(c).join('')||'<p class="mu">Aucun favori (étoile dans « Gérer mes aliments »).</p>'}<details ${P?'open':''} ontoggle="P=this.open"><summary>Mes plats (${o.length})</summary><div style="margin-top:10px">${o.map(c).join('')||'<p class="mu">Aucun plat mémorisé.</p>'}</div></details>`}
 function mealForm(d){const t=d===today()?hourType():1,inp=(l,n,r)=>`<div><label>${l}</label><input name="${n}" inputmode="decimal" ${r?'required':''}></div>`;
- return`<form onsubmit="addMeal(event,'${d}')"><button type="button" class="btn s" onclick="pasteNut(this.form)">Coller les valeurs nutritionnelles</button><p class="mu pm" style="margin:6px 0 12px"></p><div class="pz" hidden><label>Collez le tableau ici</label><textarea rows="5"></textarea><button type="button" class="btn s" onclick="fillNut(this.form,this.form.querySelector('.pz textarea').value)">Remplir le formulaire</button><div style="height:12px"></div></div><label>Nom</label><input name="name" required><label>Quantité de référence (les valeurs ci-dessous correspondent à cette quantité ; sans unité : grammes ; vide : 100 g)</label><input name="qty" placeholder="100 g">
+ return`<form onsubmit="addMeal(event,'${d}')"><button type="button" class="btn s" onclick="pasteNut(this.form)">Coller les valeurs nutritionnelles</button><p class="mu pm" style="margin:6px 0 12px"></p><div class="pz" hidden><label>Collez le tableau ici</label><textarea rows="5" placeholder="Touchez ici puis « Coller »" onpaste="const t=this,f=this.form;setTimeout(()=>fillNut(f,t.value),0)"></textarea><button type="button" class="btn s" onclick="fillNut(this.form,this.form.querySelector('.pz textarea').value)">Remplir le formulaire</button><div style="height:12px"></div></div><label>Nom</label><input name="name" required><label>Quantité de référence (les valeurs ci-dessous correspondent à cette quantité ; sans unité : grammes ; vide : 100 g)</label><input name="qty" placeholder="100 g">
 ${inp('Calories (kcal)','kcal',1)}<div class="grid">${inp('Lipides (g)','f')}${inp('Acides gras saturés (g)','sat')}${inp('Glucides (g)','c')}${inp('Sucres (g)','s')}</div>${inp('Protéines (g)','p')}<div class="grid">${inp('Fibres (g)','fi')}${inp('Sel (g)','na')}</div>
 <div class="grid"><div><label>Repas</label><select name="type">${MEALS.map((m,i)=>`<option ${i===t?'selected':''}>${m}</option>`).join('')}</select></div><div><label>Heure</label><input type="time" name="time" value="${d===today()?nowT():'12:00'}"></div></div>
 <label><input type="checkbox" name="mem" style="width:auto;min-height:0;margin-right:8px">Mémoriser dans « Mes plats »</label><label><input type="checkbox" name="fav" style="width:auto;min-height:0;margin-right:8px">Ajouter aux favoris</label><div style="height:10px"></div><button class="btn">Ajouter</button></form>`}
@@ -82,8 +83,10 @@ function nstat(l,v,mode){if(mode==='none')return{h:null,t:''};
   return{h:lerp(40,5,(v-l.max)/(l.max*.5)),t:'Trop'}}
  const ex=v/l.max-1;if(ex<=0)return mode==='live'?{h:null,t:''}:{h:140,t:'Dans la limite'};
  return ex<=.3?{h:50,t:'Léger excès'}:ex<=.8?{h:28,t:'Excès'}:{h:5,t:'Fort excès'}}
-function nbox(k,label,v,L,mode){const l=L[k],st=nstat(l,v,mode),h=st.h,rng=l.min!==undefined?`${r0(l.min)}–${r0(l.max)} g`:`max ${fx(l.max,l.max<20?1:0)} g`;
- return`<div class="stat" style="border:1.5px solid ${h===null?'transparent':`hsl(${h} 65% 55% / .85)`};${h===null?'':`background:hsl(${h} 60% 50% / .12)`}"><span class="mu">${label}</span><b style="color:${h===null?'var(--tx)':`hsl(${h} 75% 62%)`}">${fx(v)} g</b><span class="mu">${st.t?st.t+' · ':''}${rng}</span></div>`}
+function nbox(k,label,v,L,mode){const l=L[k],st=nstat(l,v,mode),h=st.h,rng=l.min!==undefined?`${r0(l.min)}–${r0(l.max)} g`:`max ${fx(l.max,l.max<20?1:0)} g`,pct=Math.min(100,l.max>0?v/l.max*100:0);
+ const sty=h===null?'':`background:linear-gradient(145deg,hsl(${h} 55% 30% / .6),hsl(${h} 45% 16% / .4));border-color:hsl(${h} 65% 58% / .6);box-shadow:0 0 16px hsl(${h} 75% 50% / .22),inset 0 1px 0 #ffffff1c`,
+ gc=h===null?'linear-gradient(90deg,#8aa196,#e8f1ec)':`linear-gradient(90deg,hsl(${h} 70% 48%),hsl(${h} 85% 70%))`;
+ return`<div class="stat nb" style="${sty}"><span class="mu">${label}</span><b style="color:${h===null?'var(--tx)':`hsl(${h} 85% 72%)`}">${fx(v)} g</b><span class="mu">${st.t?st.t+' · ':''}${rng}</span><div class="gb"><i style="width:${pct}%;background:${gc}"></i></div></div>`}
 const OTH=[['Sucre','s'],['Sel','na'],['Fibres','fi'],['AG saturés','sat']];
 function nutriCard(c){const L=c.lim,g=n=>r0(n)+' g',rows=[['Protéines','p'],['Glucides','c'],['Lipides','f'],['Fibres','fi'],['Sel','na'],['Sucres','s'],['AG saturés','sat']];
  return`<div class="card"><h2>Repères nutritionnels journaliers</h2><div class="nt mu"><span></span><span>Min</span><span>Cible</span><span>Max</span></div>${rows.map(r=>{const l=L[r[1]];return`<div class="nt"><span>${r[0]}</span><b>${l.min!==undefined?g(l.min):'—'}</b><b>${l.tgt!==undefined?g(l.tgt):'—'}</b><b>${g(l.max)}</b></div>`}).join('')}
@@ -110,8 +113,8 @@ const nrm=x=>x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const UNIT=u=>u==='mg'?1e-3:(u==='ug'||u==='µg')?1e-6:1;
 const NRULES=[['sat',/(acides? gras satures?|ag satures?|graisses? saturees?|dont satures?)/],['s',/sucres?/],['fi',/fibres?/],['f',/(matieres? grasses?|lipides?|graisses?)/],['c',/(glucides?|hydrates? de carbone)/],['p',/proteines?/],['sodium',/sodium/],['na',/\bsel\b/]];
 function parseNut(raw){const text=nrm(raw.replace(/\r/g,'')),v={},est=[],nre=new RegExp('^[^\\d?]{0,40}?(\\?|'+NP+')\\s*(mg|µg|ug|g)?'),nre2=new RegExp(NP+'\\s*(mg|µg|ug|g)?');
- for(const line of text.split('\n'))for(const[k,re]of NRULES){const m=line.match(re);if(!m||v[k]!==undefined)continue;const rest=line.slice(m.index+m[0].length),t=rest.match(nre);if(!t)continue;
-  if(t[1]==='?'){const t2=rest.slice(t[0].length).match(nre2);if(!t2)continue;v[k]=pn(t2[1])*UNIT(t2[2]);est.push(k)}else v[k]=pn(t[2])*UNIT(t[3])}
+ const L=text.split('\n');L.forEach((line,i)=>{for(const[k,re]of NRULES){const m=line.match(re);if(!m||v[k]!==undefined)continue;let rest=line.slice(m.index+m[0].length),t=rest.match(nre);if(!t&&L[i+1]&&!NRULES.some(r=>r[1].test(L[i+1]))){rest=L[i+1];t=rest.match(nre)}if(!t)continue;
+  if(t[1]==='?'){const t2=rest.slice(t[0].length).match(nre2);if(!t2)continue;v[k]=pn(t2[1])*UNIT(t2[2]);est.push(k)}else v[k]=pn(t[2])*UNIT(t[3])}})
  const kc=text.match(new RegExp(NP+'\\s*kcal')),kj=text.match(new RegExp(NP+'\\s*kj'));
  if(kc)v.kcal=pn(kc[1]);else if(kj)v.kcal=pn(kj[1])/4.184;
  if(v.na===undefined&&v.sodium!==undefined){v.na=v.sodium*2.5;est.push('sodium')}delete v.sodium;
@@ -123,8 +126,11 @@ function fillNut(f,raw){const r=parseNut(raw),E=n=>f.elements.namedItem(n),m=f.q
  E('qty').value=r.qty;if(r.name)E('name').value=r.name;
  m.textContent=`Rempli : ${n} champ${n>1?'s':''}. Vérifiez avant d'ajouter.`+(r.est.includes('fi')?' Fibres : valeur de la colonne de comparaison (non indiquée sur le produit).':'')+(r.est.includes('sodium')?' Sel : calculé depuis le sodium (× 2,5).':'')+(miss.length?' Non trouvé : '+miss.join(', ')+'.':'');
  f.querySelector('.pz').hidden=true}
-async function pasteNut(f){let t='';try{t=await navigator.clipboard.readText()}catch(e){}
- if(!t||!t.trim()){f.querySelector('.pz').hidden=false;f.querySelector('.pm').textContent='Presse-papiers inaccessible ou vide : collez le texte dans la zone ci-dessous.';return}
+async function pasteNut(f){const m=f.querySelector('.pm'),z=f.querySelector('.pz');let t='',err='';
+ if(!navigator.clipboard)err='API indisponible : ouvrez l\'app en HTTPS';
+ else{try{t=await navigator.clipboard.readText()}catch(e){err=(e&&e.name)||'erreur'}
+  if(!t&&!err&&navigator.clipboard.read){try{for(const it of await navigator.clipboard.read())if(it.types.includes('text/plain')){t=await(await it.getType('text/plain')).text();break}}catch(e){err=(e&&e.name)||err}}}
+ if(!t||!t.trim()){z.hidden=false;m.textContent='Lecture automatique impossible'+(err?' ('+err+')':' (presse-papiers vide ?)')+' : touchez la zone ci-dessous puis « Coller », le formulaire se remplit tout seul.';z.querySelector('textarea').focus();return}
  fillNut(f,t)}
 /* ---------- Quantité (produit en croix) ---------- */
 const normQty=t=>{t=String(t||'').trim();if(!/\d/.test(t))return'100 g';if(/^\d+(?:[.,]\d+)?$/.test(t))return num(t)===1?'1 portion':t+' g';return t};
@@ -140,15 +146,15 @@ const qp=()=>{const e=$('#qp');if(e)e.innerHTML=qpHtml()};
 function qOpts(r){const cur=curQty(),a=[],p=r.u==='portion';if(p){for(let i=1;i<=40;i++)a.push(i/4)}else{for(let i=5;i<=300;i+=5)a.push(i);for(let i=310;i<=1000;i+=10)a.push(i)}
  if(!a.includes(cur))a.push(cur);a.sort((x,y)=>x-y);return a.map(v=>`<option value="${v}" ${v===cur?'selected':''}>${fx(v,2)} ${p?(v>1?'portions':'portion'):r.u}</option>`).join('')}
 function qFood(id){Q.id=id;Q.qty=null;render()}
-function qtyCard(){if(!D.foods.length)return`<div class="card"><details><summary>Quantité</summary><p class="mu">Ajoutez d'abord des aliments pour pouvoir ajuster leur quantité.</p></details></div>`;
+function qtyCard(d=today()){if(!D.foods.length)return`<div class="card"><details><summary>Quantité</summary><p class="mu">Ajoutez d'abord des aliments pour pouvoir ajuster leur quantité.</p></details></div>`;
  const f=curFood(),r=fref(f);Q.id=f.id;
  return`<div class="card"><details ${Q.open?'open':''} ontoggle="Q.open=this.open"><summary>Quantité</summary><div style="margin-top:10px">
 <label>Aliment</label><select onchange="qFood(this.value)">${D.foods.map(x=>`<option value="${x.id}" ${x.id===f.id?'selected':''}>${esc(x.name)} (${esc(x.qty||'')})</option>`).join('')}</select>
 <label>Quantité consommée</label><select onchange="Q.qty=+this.value;qp()">${qOpts(r)}</select>
-<label>Repas</label><select onchange="Q.type=+this.value">${MEALS.map((m,i)=>`<option value="${i}" ${i===(Q.type===null?hourType():Q.type)?'selected':''}>${m}</option>`).join('')}</select>
-<div id="qp">${qpHtml()}</div><div style="height:12px"></div><button class="btn" onclick="addQty()">Ajouter au journal</button></div></details></div>`}
-function addQty(){const f=curFood();if(!f)return;const r=fref(f),q=curQty();if(!(q>0))return alert('Indiquez une quantité.');const v=scaled(f,q);
- D.meals.push({id:uid(),name:f.name,qty:fx(q,2)+(r.u==='portion'?(q>1?' portions':' portion'):' '+r.u),kcal:r0(v.kcal),p:rd(v.p),c:rd(v.c),f:rd(v.f),s:rd(v.s),na:rd(v.na),fi:rd(v.fi),sat:rd(v.sat),type:MEALS[Q.type===null?hourType():Q.type],time:nowT(),date:today()});Q.qty=null;commit()}
+<label>Repas</label><select onchange="Q.type=+this.value">${MEALS.map((m,i)=>`<option value="${i}" ${i===(Q.type===null?defType(d):Q.type)?'selected':''}>${m}</option>`).join('')}</select>
+<div id="qp">${qpHtml()}</div><div style="height:12px"></div><button class="btn" onclick="addQty('${d}')">Ajouter au journal</button></div></details></div>`}
+function addQty(d=today()){const f=curFood();if(!f)return;const r=fref(f),q=curQty();if(!(q>0))return alert('Indiquez une quantité.');const v=scaled(f,q);
+ D.meals.push({id:uid(),name:f.name,qty:fx(q,2)+(r.u==='portion'?(q>1?' portions':' portion'):' '+r.u),kcal:r0(v.kcal),p:rd(v.p),c:rd(v.c),f:rd(v.f),s:rd(v.s),na:rd(v.na),fi:rd(v.fi),sat:rd(v.sat),type:MEALS[Q.type===null?defType(d):Q.type],time:d===today()?nowT():'12:00',date:d});toast('✓ '+f.name+' → '+D.meals[D.meals.length-1].type);Q.qty=null;commit()}
 /* ---------- Repas ---------- */
 function mealsView(){const ms=dayMeals(today());
  return`<h1>Repas</h1><div class="card">${foodChips(today())}</div>${qtyCard()}
@@ -222,7 +228,7 @@ function dayDetail(d){const ms=dayMeals(d),ws=dayWork(d),w=D.weights.find(x=>x.d
  return`<div class="card"><h2 style="text-transform:capitalize">${fdate(d)}</h2><div class="grid"><div class="stat"><span class="mu">Calories ingérées</span><b>${r0(sum(ms,'kcal'))}</b></div><div class="stat"><span class="mu">Dépenses (base + sport)</span><b>${ex}</b></div><div class="stat"><span class="mu">${ms.length&&bal<0?'Déficit du jour':'Surplus du jour'}</span><b>${ms.length?signK(bal)+' kcal':'—'}</b></div><div class="stat"><span class="mu">Sport</span><b>${sum(ws,'kcal')} kcal</b></div><div class="stat"><span class="mu">Poids</span><b>${w?fx(w.kg)+' kg':'—'}</b></div></div>
 <h2 style="margin:16px 0 8px">Macronutriments</h2><div class="g3">${[['Protéines','p'],['Glucides','c'],['Lipides','f']].map(n=>nbox(n[1],n[0],sum(ms,n[1]),c.lim,ms.length?'':'none')).join('')}</div><h2 style="margin:16px 0 8px">Autres apports</h2><div class="grid">${OTH.map(n=>nbox(n[1],n[0],sum(ms,n[1]),c.lim,ms.length?'':'none')).join('')}</div></div>
 <div class="card"><h2>Repas</h2>${mealRing(ms,c.target+sum(ws,'kcal'))}</div><div class="card"><h2>Détail des repas</h2>${mealList(ms)}</div>${ring(d)}<div class="card"><h2>Séances</h2>${workList(ws)}</div>
-<div class="card"><details><summary>Ajouter un aliment à ce jour</summary><div style="margin-top:10px">${foodChips(d)}${mealForm(d)}</div></details></div>
+<div class="card"><details><summary>Ajouter un aliment à ce jour</summary><div style="margin-top:10px">${foodChips(d)}${mealForm(d)}</div></details></div>${qtyCard(d)}
 <div class="card"><details><summary>Ajouter une séance à ce jour</summary><div style="margin-top:10px">${sportForm(d)}</div></details></div>`}
 function histView(){return`<h1>Historique</h1><div class="seg"><button class="${H.view==='week'?'on':''}" onclick="H.view='week';render()">7 jours</button><button class="${H.view==='cal'?'on':''}" onclick="H.view='cal';render()">Calendrier</button></div>`+
  (H.view==='week'?`<div class="card"><h2>7 derniers jours</h2>${weekChart()}</div><div class="card">${avgCard()}</div>`:`<div class="card">${calendar()}</div>${dayDetail(H.sel)}`)}
@@ -246,8 +252,9 @@ ${nutriCard(c)}<div class="card"><h2>Données</h2><p class="mu">Tout reste sur c
 const views={home,meals:mealsView,sport:sportView,weight:weightView,hist:histView,profile:profileView};
 function render(){const y=scrollY;$('#view').innerHTML=views[tab]();document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));scrollTo(0,y)}
 const commit=()=>{save();render()};
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),1900)}
 function addFood(id,d){const f=D.foods.find(x=>x.id===id);if(!f)return;const{id:_i,fav,...n}=f;
- D.meals.push({...n,id:uid(),type:MEALS[d===today()?hourType():1],time:d===today()?nowT():'12:00',date:d});commit()}
+ D.meals.push({...n,id:uid(),type:MEALS[d===today()?hourType():1],time:d===today()?nowT():'12:00',date:d});toast('✓ '+n.name+' → '+D.meals[D.meals.length-1].type);commit()}
 function addMeal(e,d){e.preventDefault();const f=e.target,v=n=>f[n].value,m={id:uid(),name:v('name').trim(),qty:normQty(v('qty')),kcal:num(v('kcal')),p:num(v('p')),c:num(v('c')),f:num(v('f')),s:num(v('s')),na:num(v('na')),fi:num(v('fi')),sat:num(v('sat')),type:v('type'),time:v('time')||nowT(),date:d};
  D.meals.push(m);if(f.mem.checked||f.fav.checked){const{id,type,time,date,...n}=m;D.foods.push({...n,id:uid(),fav:f.fav.checked})}commit()}
 function toggleFav(id){const f=D.foods.find(x=>x.id===id);if(f)f.fav=!f.fav;commit()}
