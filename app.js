@@ -10,7 +10,7 @@ const defSports=()=>[['Escalade en bloc',5.8,7.5],['Musculation au poids du corp
 const defFoods=()=>[['Œufs','2 œufs (120 g)',156,13,1,11,1,.3,0,3.3],['Banane','1 moyenne (120 g)',105,1,27,0,14,0,3,.1],['Flocons d\'avoine','40 g',150,5,27,3,1,0,4,.5],['Poulet','120 g cuit',198,37,0,4,0,.2,0,1.2],['Riz','150 g cuit',195,4,43,.5,.1,0,.6,.1],['Skyr','150 g',98,17,6,.5,5,.1,0,.2]]
  .map((a,i)=>({id:'f'+i,name:a[0],qty:a[1],kcal:a[2],p:a[3],c:a[4],f:a[5],s:a[6],na:a[7],fi:a[8],sat:a[9],fav:true}));
 let D={profile:{weight:75,height:175,age:30,sex:'m',activity:1.375,pgkg:0},goal:{type:'maintain',rate:0.25},meals:[],foods:defFoods(),sports:defSports(),metV:2,workouts:[],weights:[]};
-let P=false,Q={open:false,id:'',qty:null,type:null},tab='home',S={mode:0,int:1,type:'',h:1,m:0},H={view:'week',chart:'both',month:'',sel:''};
+let Sq={p:'',q:'',m:''},Gm=false,Sp=false,Sv=7,P=false,Q={open:false,id:'',qty:null,type:null},tab='home',S={mode:0,int:1,type:'',h:1,m:0},H={view:'week',chart:'both',month:'',sel:''};
 function merge(o){if(!o||typeof o!=='object')return false;
  Object.assign(D.profile,o.profile||{});Object.assign(D.goal,o.goal||{});
  for(const k of['meals','workouts','weights','sports'])if(Array.isArray(o[k]))D[k]=o[k];
@@ -54,10 +54,14 @@ function mealList(ms){if(!ms.length)return'<span class="mu">Aucun repas.</span>'
  return`<div class="mb" style="border-color:${MCOL[i]}"><div class="row"><b style="color:${MCOL[i]}">${t}</b><span class="mu">${r0(sum(a,'kcal'))} kcal</span></div>${a.map(m=>{const x=NUT.filter(n=>m[n[1]]).map(n=>n[0]+' '+fx(m[n[1]])).join(' · ');
  return`<div class="item"><div><b>${esc(m.name)}</b> <span class="mu">${esc(m.qty||'')}</span><div class="mu">${m.time} · P${fx(m.p,0)} G${fx(m.c,0)} L${fx(m.f,0)}${x?'<br>'+x:''}</div></div><div class="row"><b>${r0(m.kcal)}</b><button class="x" aria-label="Supprimer" onclick="del('meals','${m.id}')">×</button></div></div>`}).join('')}</div>`}).join('')}
 const workList=ws=>ws.length?ws.map((x,i)=>`<div class="item"><div><span class="dot" style="background:${WCOL[i%6]}"></span><b>${esc(x.type)}</b><div class="mu" style="margin-left:18px">${x.time} · ${x.min?x.min+' min':'durée —'}${x.manual?' · saisi':x.int?' · élevée':' · modérée'}</div></div><div class="row"><b>${x.kcal}</b><button class="x" aria-label="Supprimer" onclick="del('workouts','${x.id}')">×</button></div></div>`).join(''):'<span class="mu">Aucune séance.</span>';
-function foodChips(d){const f=D.foods.filter(x=>x.fav),o=D.foods.filter(x=>!x.fav),c=x=>`<button class="chip" onclick="addFood('${x.id}','${d}')">${esc(x.name)}<span class="mu"> ${x.kcal}</span></button>`;
- return`<h2>Favoris</h2>${f.map(c).join('')||'<p class="mu">Aucun favori (étoile dans « Gérer mes aliments »).</p>'}<details ${P?'open':''} ontoggle="P=this.open"><summary>Mes plats (${o.length})</summary><div style="margin-top:10px">${o.map(c).join('')||'<p class="mu">Aucun plat mémorisé.</p>'}</div></details>`}
+const byName=(a,b)=>a.name.localeCompare(b.name,'fr'),hit=(f,q)=>!q||nrm(f.name).includes(nrm(q.trim()));
+const chipH=(x,d)=>`<button class="chip" onclick="addFood('${x.id}','${d}')">${esc(x.name)}<span class="mu"> ${x.kcal}</span></button>`;
+function platsHtml(d){const q=Sq.p.trim(),a=D.foods.filter(x=>q?hit(x,q):!x.fav).sort(byName);return a.map(x=>chipH(x,d)).join('')||`<p class="mu">${q?'Aucun résultat.':'Aucun plat mémorisé.'}</p>`}
+const fp=d=>{const e=$('#pl');if(e)e.innerHTML=platsHtml(d)};
+function foodChips(d){const f=D.foods.filter(x=>x.fav).sort(byName);
+ return`<h2>Favoris</h2>${f.map(x=>chipH(x,d)).join('')||'<p class="mu">Aucun favori (étoile dans « Gérer mes aliments »).</p>'}<details ${P?'open':''} ontoggle="P=this.open"><summary>Mes plats (${D.foods.filter(x=>!x.fav).length})</summary><div style="margin-top:10px"><input type="search" placeholder="Rechercher un plat (favoris inclus)" value="${esc(Sq.p)}" oninput="Sq.p=this.value;fp('${d}')"><div id="pl">${platsHtml(d)}</div></div></details>`}
 function mealForm(d){const t=d===today()?hourType():1,inp=(l,n,r)=>`<div><label>${l}</label><input name="${n}" inputmode="decimal" ${r?'required':''}></div>`;
- return`<form onsubmit="addMeal(event,'${d}')"><button type="button" class="btn s" onclick="pasteNut(this.form)">Coller les valeurs nutritionnelles</button><p class="mu pm" style="margin:6px 0 12px"></p><div class="pz" hidden><label>Collez le tableau ici</label><textarea rows="5" placeholder="Touchez ici puis « Coller »" onpaste="const t=this,f=this.form;setTimeout(()=>fillNut(f,t.value),0)"></textarea><button type="button" class="btn s" onclick="fillNut(this.form,this.form.querySelector('.pz textarea').value)">Remplir le formulaire</button><div style="height:12px"></div></div><label>Nom</label><input name="name" required><label>Quantité de référence (les valeurs ci-dessous correspondent à cette quantité ; sans unité : grammes ; vide : 100 g)</label><input name="qty" placeholder="100 g">
+ return`<form onsubmit="addMeal(event,'${d}')" oninput="fInput(event,this)"><button type="button" class="btn s" onclick="pasteNut(this.form)">Coller les valeurs nutritionnelles</button><p class="mu pm" style="margin:6px 0 12px"></p><div class="pz" hidden><label>Collez le tableau ici</label><textarea rows="5" placeholder="Touchez ici puis « Coller »" onpaste="const t=this,f=this.form;setTimeout(()=>fillNut(f,t.value),0)"></textarea><button type="button" class="btn s" onclick="fillNut(this.form,this.form.querySelector('.pz textarea').value)">Remplir le formulaire</button><div style="height:12px"></div></div><label>Nom</label><input name="name" required><label>Quantité de référence (les valeurs ci-dessous correspondent à cette quantité ; sans unité : grammes ; vide : 100 g)</label><input name="qty" placeholder="100 g"><label>Taille de la portion enregistrée : <b class="sl-l">100 %</b></label><input type="range" name="sl" min="10" max="300" step="5" value="100">
 ${inp('Calories (kcal)','kcal',1)}<div class="grid">${inp('Lipides (g)','f')}${inp('Acides gras saturés (g)','sat')}${inp('Glucides (g)','c')}${inp('Sucres (g)','s')}</div>${inp('Protéines (g)','p')}<div class="grid">${inp('Fibres (g)','fi')}${inp('Sel (g)','na')}</div>
 <div class="grid" style="grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)"><div><label>Repas</label><select name="type">${MEALS.map((m,i)=>`<option ${i===t?'selected':''}>${m}</option>`).join('')}</select></div><div><label>Heure</label><div class="fld"><input type="time" name="time" value="${d===today()?nowT():'12:00'}"></div></div></div>
 <label><input type="checkbox" name="mem" style="width:auto;min-height:0;margin-right:8px">Mémoriser dans « Mes plats »</label><label><input type="checkbox" name="fav" style="width:auto;min-height:0;margin-right:8px">Ajouter aux favoris</label><div style="height:10px"></div><button class="btn">Ajouter</button></form>`}
@@ -109,7 +113,7 @@ function home(){const c=calc(),t=today(),ms=dayMeals(t),eat=sum(ms,'kcal'),rest=
 /* ---------- Collage d'un tableau nutritionnel ---------- */
 const NP='(\\d{1,3}(?:[\\s\\u00a0\\u202f]\\d{3})+(?:[.,]\\d+)?|\\d+(?:[.,]\\d+)?)';
 const pn=s=>parseFloat(String(s).replace(/[\s\u00a0\u202f]/g,'').replace(',','.'));
-const nrm=x=>x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const nrm=x=>x.toLowerCase().replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const UNIT=u=>u==='mg'?1e-3:(u==='ug'||u==='µg')?1e-6:1;
 const NRULES=[['sat',/(acides? gras satures?|ag satures?|graisses? saturees?|dont satures?)/],['s',/sucres?/],['fi',/fibres?/],['f',/(matieres? grasses?|lipides?|graisses?)/],['c',/(glucides?|hydrates? de carbone)/],['p',/proteines?/],['sodium',/sodium/],['na',/\bsel\b/]];
 function parseNut(raw){const text=nrm(raw.replace(/\r/g,'')),v={},est=[],nre=new RegExp('^[^\\d?]{0,40}?(\\?|'+NP+')\\s*(mg|µg|ug|g)?'),nre2=new RegExp(NP+'\\s*(mg|µg|ug|g)?');
@@ -125,13 +129,20 @@ function fillNut(f,raw){const r=parseNut(raw),E=n=>f.elements.namedItem(n),m=f.q
  if(!n){m.textContent='Aucune valeur reconnue dans le texte collé.';f.querySelector('.pz').hidden=false;return}
  E('qty').value=r.qty;if(r.name)E('name').value=r.name;
  m.textContent=`Rempli : ${n} champ${n>1?'s':''}. Vérifiez avant d'ajouter.`+(r.est.includes('fi')?' Fibres : valeur de la colonne de comparaison (non indiquée sur le produit).':'')+(r.est.includes('sodium')?' Sel : calculé depuis le sodium (× 2,5).':'')+(miss.length?' Non trouvé : '+miss.join(', ')+'.':'');
- f.querySelector('.pz').hidden=true}
+ f._b=null;const sl=E('sl');if(sl){sl.value=100;f.querySelector('.sl-l').textContent='100 %'}f.querySelector('.pz').hidden=true}
 async function pasteNut(f){const m=f.querySelector('.pm'),z=f.querySelector('.pz');let t='',err='';
  if(!navigator.clipboard)err='API indisponible : ouvrez l\'app en HTTPS';
  else{try{t=await navigator.clipboard.readText()}catch(e){err=(e&&e.name)||'erreur'}
   if(!t&&!err&&navigator.clipboard.read){try{for(const it of await navigator.clipboard.read())if(it.types.includes('text/plain')){t=await(await it.getType('text/plain')).text();break}}catch(e){err=(e&&e.name)||err}}}
  if(!t||!t.trim()){z.hidden=false;m.textContent='Lecture automatique impossible'+(err?' ('+err+')':' (presse-papiers vide ?)')+' : touchez la zone ci-dessous puis « Coller », le formulaire se remplit tout seul.';z.querySelector('textarea').focus();return}
  fillNut(f,t)}
+const SK=['kcal','f','sat','c','s','p','fi','na'];
+function fmtQty(q,k){const r=fref({qty:normQty(q)}),n=r.n*k;return fx(n,2)+' '+(r.u==='portion'?(n>1?'portions':'portion'):r.u)}
+function fInput(e,f){const t=e.target,E=n=>f.elements.namedItem(n),L=f.querySelector('.sl-l');
+ if(t.name==='sl'){if(!f._b)f._b={q:E('qty').value,v:SK.map(k=>E(k).value)};const k=t.value/100;
+  SK.forEach((x,i)=>{const b=f._b.v[i];if(b!=='')E(x).value=String(x==='kcal'?Math.round(num(b)*k):Math.round(num(b)*k*100)/100).replace('.',',')});
+  E('qty').value=fmtQty(f._b.q,k);L.textContent=t.value+' %'}
+ else if(SK.includes(t.name)||t.name==='qty'){f._b=null;const s=E('sl');if(s){s.value=100;L.textContent='100 %'}}}
 /* ---------- Quantité (produit en croix) ---------- */
 const normQty=t=>{t=String(t||'').trim();if(!/\d/.test(t))return'100 g';if(/^\d+(?:[.,]\d+)?$/.test(t))return num(t)===1?'1 portion':t+' g';return t};
 const fref=f=>{const t=String(f.qty||'').trim(),m=t.match(/(\d+(?:[.,]\d+)?)\s*(g|ml)\b/i);if(m&&num(m[1])>0)return{n:num(m[1]),u:m[2].toLowerCase()};
@@ -146,21 +157,37 @@ const qp=()=>{const e=$('#qp');if(e)e.innerHTML=qpHtml()};
 function qOpts(r){const cur=curQty(),a=[],p=r.u==='portion';if(p){for(let i=1;i<=40;i++)a.push(i/4)}else{for(let i=5;i<=300;i+=5)a.push(i);for(let i=310;i<=1000;i+=10)a.push(i)}
  if(!a.includes(cur))a.push(cur);a.sort((x,y)=>x-y);return a.map(v=>`<option value="${v}" ${v===cur?'selected':''}>${fx(v,2)} ${p?(v>1?'portions':'portion'):r.u}</option>`).join('')}
 function qFood(id){Q.id=id;Q.qty=null;render()}
+const qFoods=()=>D.foods.filter(x=>hit(x,Sq.q)).sort(byName);
+const qFoodOpts=fs=>fs.map(x=>`<option value="${x.id}" ${x.id===Q.id?'selected':''}>${esc(x.name)} (${esc(x.qty||'')})</option>`).join('')||'<option>Aucun résultat</option>';
+function qUpdate(){const fs=qFoods();if(fs.length&&!fs.some(x=>x.id===Q.id)){Q.id=fs[0].id;Q.qty=null}
+ const a=$('#qfood'),b=$('#qqty');if(a)a.innerHTML=qFoodOpts(fs);if(b&&fs.length)b.innerHTML=qOpts(fref(curFood()));qp()}
 function qtyCard(d=today()){if(!D.foods.length)return`<div class="card"><details><summary>Quantité</summary><p class="mu">Ajoutez d'abord des aliments pour pouvoir ajuster leur quantité.</p></details></div>`;
- const f=curFood(),r=fref(f);Q.id=f.id;
+ const fs=qFoods();if(fs.length&&!fs.some(x=>x.id===Q.id)){Q.id=fs[0].id;Q.qty=null}
+ const r=fref(curFood());
  return`<div class="card"><details ${Q.open?'open':''} ontoggle="Q.open=this.open"><summary>Quantité</summary><div style="margin-top:10px">
-<label>Aliment</label><select onchange="qFood(this.value)">${D.foods.map(x=>`<option value="${x.id}" ${x.id===f.id?'selected':''}>${esc(x.name)} (${esc(x.qty||'')})</option>`).join('')}</select>
-<label>Quantité consommée</label><select onchange="Q.qty=+this.value;qp()">${qOpts(r)}</select>
+<label>Aliment</label><input type="search" placeholder="Rechercher un aliment" value="${esc(Sq.q)}" oninput="Sq.q=this.value;qUpdate()"><select id="qfood" onchange="qFood(this.value)">${qFoodOpts(fs)}</select>
+<label>Quantité consommée</label><select id="qqty" onchange="Q.qty=+this.value;qp()">${qOpts(r)}</select>
 <label>Repas</label><select onchange="Q.type=+this.value">${MEALS.map((m,i)=>`<option value="${i}" ${i===(Q.type===null?defType(d):Q.type)?'selected':''}>${m}</option>`).join('')}</select>
 <div id="qp">${qpHtml()}</div><div style="height:12px"></div><button class="btn" onclick="addQty('${d}')">Ajouter au journal</button></div></details></div>`}
-function addQty(d=today()){const f=curFood();if(!f)return;const r=fref(f),q=curQty();if(!(q>0))return alert('Indiquez une quantité.');const v=scaled(f,q);
+function addQty(d=today()){const f=curFood();if(!f)return;if(!qFoods().some(x=>x.id===f.id))return alert('Aucun aliment sélectionné.');const r=fref(f),q=curQty();if(!(q>0))return alert('Indiquez une quantité.');const v=scaled(f,q);
  D.meals.push({id:uid(),name:f.name,qty:fx(q,2)+(r.u==='portion'?(q>1?' portions':' portion'):' '+r.u),kcal:r0(v.kcal),p:rd(v.p),c:rd(v.c),f:rd(v.f),s:rd(v.s),na:rd(v.na),fi:rd(v.fi),sat:rd(v.sat),type:MEALS[Q.type===null?defType(d):Q.type],time:d===today()?nowT():'12:00',date:d});toast('✓ '+f.name+' → '+D.meals[D.meals.length-1].type);Q.qty=null;commit()}
 /* ---------- Repas ---------- */
 function mealsView(){const ms=dayMeals(today());
  return`<h1>Repas</h1><div class="card">${foodChips(today())}</div>${qtyCard()}
 <div class="card"><h2>Aujourd'hui · ${r0(sum(ms,'kcal'))} kcal</h2>${mealList(ms)}</div>
 <div class="card"><details><summary>Ajouter un aliment</summary><div style="margin-top:10px">${mealForm(today())}</div></details></div>
-<div class="card"><details><summary>Gérer mes aliments</summary><p class="mu">★ = favori (affiché en haut). Retirer un favori garde l'aliment dans « Mes plats ». × le supprime de la mémoire.</p>${D.foods.map(f=>`<div class="item"><span>${esc(f.name)} <span class="mu">${esc(f.qty||'')} · ${f.kcal} kcal</span></span><div class="row"><button class="x" aria-label="Favori" onclick="toggleFav('${f.id}')" style="color:${f.fav?'var(--ac)':'var(--mu)'}">${f.fav?'★':'☆'}</button><button class="x" aria-label="Supprimer" onclick="del('foods','${f.id}')">×</button></div></div>`).join('')||'<span class="mu">Vide.</span>'}</details></div>`}
+<div class="card"><details ${Gm?'open':''} ontoggle="Gm=this.open"><summary>Gérer mes aliments</summary><p class="mu">⋮ = modifier l'aliment. ★ = favori (affiché en haut). × = le supprimer de la mémoire.</p><input type="search" placeholder="Rechercher un aliment" value="${esc(Sq.m)}" oninput="Sq.m=this.value;fm()"><div id="ml">${manageHtml()}</div></details></div>`}
+function manageHtml(){const a=D.foods.filter(x=>hit(x,Sq.m)).sort(byName);
+ return a.map(f=>`<div class="item"><span style="flex:1">${esc(f.name)} <span class="mu">${esc(f.qty||'')} · ${f.kcal} kcal</span></span><div class="row"><button class="x" aria-label="Modifier" onclick="openFood('${f.id}')">⋮</button><button class="x" aria-label="Favori" onclick="toggleFav('${f.id}')" style="color:${f.fav?'var(--ac)':'var(--mu)'}">${f.fav?'★':'☆'}</button><button class="x" aria-label="Supprimer" onclick="del('foods','${f.id}')">×</button></div></div>`).join('')||'<span class="mu">Aucun résultat.</span>'}
+const fm=()=>{const e=$('#ml');if(e)e.innerHTML=manageHtml()};
+function openFood(id){const f=D.foods.find(x=>x.id===id);if(!f)return;const v=k=>f[k]?String(f[k]).replace('.',','):'',inp=(l,n)=>`<div><label>${l}</label><input name="${n}" inputmode="decimal" value="${v(n)}"></div>`;
+ $('#sheet').hidden=false;$('#sheet').innerHTML=`<div class="sh"><div class="row"><h1 style="margin:0">Modifier l'aliment</h1><button class="x" aria-label="Fermer" onclick="closeRules()">×</button></div><div style="height:12px"></div><div class="card"><form onsubmit="saveFood(event,'${id}')" oninput="fInput(event,this)">
+<label>Nom</label><input name="name" required value="${esc(f.name)}"><label>Quantité de référence (celle associée à la pastille)</label><input name="qty" placeholder="100 g" value="${esc(f.qty||'')}">
+<label>Taille de la portion : <b class="sl-l">100 %</b></label><input type="range" name="sl" min="10" max="300" step="5" value="100">
+${inp('Calories (kcal)','kcal')}<div class="grid">${inp('Lipides (g)','f')}${inp('Acides gras saturés (g)','sat')}${inp('Glucides (g)','c')}${inp('Sucres (g)','s')}</div>${inp('Protéines (g)','p')}<div class="grid">${inp('Fibres (g)','fi')}${inp('Sel (g)','na')}</div>
+<label><input type="checkbox" name="fav" ${f.fav?'checked':''} style="width:auto;min-height:0;margin-right:8px">Favori (affiché en haut de Repas)</label><div style="height:10px"></div><button class="btn">Enregistrer</button><div style="height:8px"></div><button type="button" class="btn s" onclick="closeRules()">Annuler</button></form></div></div>`}
+function saveFood(e,id){e.preventDefault();const f=D.foods.find(x=>x.id===id),g=n=>e.target.elements.namedItem(n);if(!f)return;
+ f.name=g('name').value.trim()||f.name;f.qty=normQty(g('qty').value);SK.forEach(k=>f[k]=num(g(k).value));f.fav=g('fav').checked;Q.qty=null;$('#sheet').hidden=true;commit()}
 
 /* ---------- Sport ---------- */
 function ring(d=today()){const c=calc(),ws=dayWork(d);
@@ -171,9 +198,27 @@ function ring(d=today()){const c=calc(),ws=dayWork(d);
 ${segs.map(s=>`<div class="item"><span><span class="dot" style="background:${s.c}"></span>${esc(s.n)}</span><b>${s.k} kcal</b></div>`).join('')}</div>`}
 function sportView(){const t=today();
  return`<h1>Sport</h1>${ring()}
-<div class="card"><div class="row"><h2 style="margin:0">Nouvelle séance</h2><button class="chip" style="margin:0" onclick="openRules()">Règles des activités</button></div><div style="height:10px"></div>${sportForm(t)}</div>
+<div class="card"><details ${Sp?'open':''} ontoggle="Sp=this.open"><summary>Nouvelle séance</summary><div style="margin-top:10px"><button class="chip" onclick="openRules()">Règles des activités</button>${sportForm(t)}</div></details></div>
+<div class="card"><h2>Suivi</h2><div class="seg">${[7,14,30].map(n=>`<button class="${Sv===n?'on':''}" onclick="Sv=${n};render()">${n} jours</button>`).join('')}</div>${suivi()}</div>
 <div class="card"><h2>Séances du jour</h2>${workList(dayWork(t))}</div>
 <div class="card"><details><summary>Historique</summary>${[...D.workouts].filter(x=>x.date!==t).sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).slice(0,30).map(x=>`<div class="item"><div>${esc(x.type)} <span class="mu">${x.date} · ${x.min||0} min</span></div><div class="row"><b>${x.kcal}</b><button class="x" onclick="del('workouts','${x.id}')">×</button></div></div>`).join('')||'<span class="mu">Vide.</span>'}</details></div>`}
+const WARM=['#ff9f43','#ff6b6b','#feca57','#ff7f50','#f368a0','#ffb142','#ee5a24','#fd9644'];
+function suivi(){const N=Sv,days=[...Array(N)].map((_,i)=>dAdd(today(),i-N+1)),names=[...new Set(D.workouts.map(x=>x.type))].sort((a,b)=>a.localeCompare(b,'fr')),col=n=>WARM[Math.max(0,names.indexOf(n))%WARM.length];
+ const per=days.map(d=>{const m={};dayWork(d).forEach(x=>m[x.type]=(m[x.type]||0)+(+x.min||0)/60);return m}),hrs=per.map(m=>Object.values(m).reduce((a,b)=>a+b,0)),kc=days.map(d=>sum(dayWork(d),'kcal'));
+ const sg=N>=30?1.3:N>=14?1:0,hm=Math.max(1,Math.ceil(Math.max(...hrs))),km=Math.max(100,Math.ceil(Math.max(...kc)/100)*100),L=34,R=306,T=14,B=150,sl=(R-L)/N,bw=Math.min(26,sl*.62),Hy=h=>B-h/hm*(B-T),Ky=k=>B-k/km*(B-T),cx=i=>L+sl*(i+.5);
+ const grid=[0,.5,1].map(f=>{const y=B-f*(B-T);return`<line x1="${L}" x2="${R}" y1="${y}" y2="${y}" stroke="#1f2e27"/><text x="${L-6}" y="${y+3}" font-size="9" fill="#ff9f43" text-anchor="end">${fx(hm*f,1)} h</text><text x="${R+6}" y="${y+3}" font-size="9" fill="#9bd95e">${r0(km*f)}</text>`}).join('');
+ const bars=days.map((d,i)=>{if(hrs[i]<=0)return'';const x=cx(i)-bw/2,H=B-Hy(hrs[i]);let y=B;
+  const seg=Object.entries(per[i]).sort((a,b)=>a[0].localeCompare(b[0],'fr')).map(([n,h])=>{const hh=h/hm*(B-T);y-=hh;return`<rect x="${x}" y="${y}" width="${bw}" height="${hh}" fill="${col(n)}" stroke="#16211c" stroke-width=".8"/>`}).join('');
+  return`<clipPath id="sc${i}"><rect x="${x}" y="${Hy(hrs[i])}" width="${bw}" height="${H}" rx="${Math.min(bw/2,7,H/2)}"/></clipPath><g clip-path="url(#sc${i})">${seg}<rect x="${x}" y="${Hy(hrs[i])}" width="${bw}" height="${H}" fill="url(#ssh)"/></g>`}).join('');
+ const bell=t=>{let a=0;kc.forEach((k,i)=>{if(k>0)a+=Math.pow(k*Math.exp(-((t-i)**2)/(2*sg*sg)),4)});return Math.pow(a,.25)};
+ let pts,p,x0,x1;
+ if(sg){pts=kc.map((k,i)=>[cx(i),Ky(bell(i))]);const S=[];for(let t=-.5;t<=N-.5+1e-9;t+=.1)S.push([L+sl*(t+.5),Ky(bell(t))]);p='M'+S.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' L');x0=L;x1=R}
+ else{pts=kc.map((k,i)=>[cx(i),Ky(k)]);p=`M${pts[0][0]},${pts[0][1]}`;for(let i=1;i<pts.length;i++){const a=pts[i-1],c=pts[i],dx=(c[0]-a[0])*.5;p+=` C${a[0]+dx},${a[1]} ${c[0]-dx},${c[1]} ${c[0]},${c[1]}`}x0=pts[0][0];x1=pts[pts.length-1][0]}
+ const lab=days.map((d,i)=>(N<=14||(N-1-i)%5===0)?`<text x="${cx(i)}" y="168" font-size="${N>7?9:11}" fill="#8aa196" text-anchor="middle">${N<=7?new Date(d).toLocaleDateString('fr-FR',{weekday:'short',timeZone:'UTC'}).slice(0,3):+d.slice(8)}</text>`:'').join('');
+ const used=names.filter(n=>days.some((d,i)=>per[i][n]!==undefined)),tk=sum(kc.map(x=>({k:x})),'k'),th=hrs.reduce((a,b)=>a+b,0);
+ return`<svg viewBox="0 0 340 176" role="img" aria-label="Heures et kcal de sport"><defs><linearGradient id="ssh" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient><linearGradient id="sar" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#9bd95e" stop-opacity=".22"/><stop offset="1" stop-color="#9bd95e" stop-opacity="0"/></linearGradient></defs>${grid}${bars}<path d="${p} L${x1},${B} L${x0},${B} Z" fill="url(#sar)"/><path d="${p}" fill="none" stroke="#0d1512" stroke-width="5.5" stroke-linecap="round" opacity=".55"/><path d="${p}" fill="none" stroke="#9bd95e" stroke-width="2.6" stroke-linecap="round"/>${pts.map((q,i)=>kc[i]>0?`<circle cx="${q[0]}" cy="${q[1]}" r="${N>14?2:3.2}" fill="#0d1512" stroke="#9bd95e" stroke-width="1.8"/>`:'').join('')}${lab}</svg>
+<div class="lg">${used.map(n=>`<span><span class="dot" style="background:${col(n)}"></span>${esc(n)}</span>`).join('')}<span><span class="dot" style="background:#9bd95e"></span>Dépense (kcal, axe de droite)${sg?' · courbe en cloche autour des séances':''}</span></div>
+<div class="grid" style="margin-top:12px"><div class="stat"><span class="mu">Temps de sport</span><b>${fx(th,1)} h</b></div><div class="stat"><span class="mu">Dépense (moy./jour)</span><b>${r0(tk/N)} kcal</b></div></div>`}
 function openRules(){$('#sheet').hidden=false;rules()}
 function closeRules(){$('#sheet').hidden=true;render()}
 function rules(){const w=latestW(),h=(s,i)=>sportKcal(s.name,60,i,w);
